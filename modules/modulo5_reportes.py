@@ -3,36 +3,60 @@ from datetime import datetime
 
 def generar_reporte_whatsapp(df):
     player_id = str(df['PlayerId'].iloc[0])
-    balance_inicial = df['BalanceStart'].iloc[0]
-    balance_final = df['Balance'].iloc[-1]
-    fecha_inicio = df['EventTime'].min().strftime('%d/%m/%Y')
-    fecha_fin = df['EventTime'].max().strftime('%d/%m/%Y')
 
-    # Juegos involucrados
-    juegos = df['GameId'].unique().tolist()
-    juegos_str = ', '.join(juegos)
-
-    # Total apostado
-    total_apostado = df['TotalBet'].sum()
-
-    # Detectar tipo de ganancia principal
+    # Encontrar la ganancia alta o jackpot principal
     jackpots = df[(df['TotalJPWin'].notna()) & (df['TotalJPWin'] > 0)]
     ganancias_altas = df[df['clasificacion'] == 'ganancia_alta']
 
     if not jackpots.empty:
-        jp = jackpots.iloc[0]
-        tipo_ganancia = f"obtuvo un jackpot de ${jp['TotalJPWin']:,.2f} MXN en el juego {jp['GameId']}"
+        evento_principal = jackpots.loc[jackpots['TotalJPWin'].idxmax()]
     elif not ganancias_altas.empty:
-        ganancia_max = ganancias_altas.loc[ganancias_altas['TotalWin'].idxmax()]
-        tipo_ganancia = f"su ganancia más alta fue de ${ganancia_max['TotalWin']:,.2f} MXN con una apuesta de ${ganancia_max['TotalBet']:,.2f} MXN (ratio x{round(ganancia_max['ratio_ganancia'], 1)})"
+        evento_principal = ganancias_altas.loc[ganancias_altas['TotalWin'].idxmax()]
     else:
-        ganancia_total = df['TotalWin'].sum()
-        tipo_ganancia = f"acumuló un total de ganancias de ${ganancia_total:,.2f} MXN"
+        evento_principal = df.loc[df['TotalWin'].idxmax()]
+
+    idx_evento = evento_principal.name
+
+    # Encontrar la última recarga antes del evento principal
+    recargas = df[(df['clasificacion'] == 'recarga') & (df.index < idx_evento)]
+
+    if not recargas.empty:
+        idx_recarga = recargas.index[-1]
+    else:
+        idx_recarga = 0
+
+    # Tramo relevante: desde la última recarga hasta el evento principal
+    tramo = df.loc[idx_recarga:idx_evento]
+
+    balance_inicial = tramo['BalanceStart'].iloc[0]
+    balance_final = evento_principal['Balance']
+    total_apostado = tramo['TotalBet'].sum()
+
+    # Juegos más jugados en el tramo
+    juegos_conteo = tramo['GameId'].value_counts()
+    juegos_principales = juegos_conteo.head(3).index.tolist()
+    juegos_str = ', '.join(juegos_principales)
+
+    # Rango de filas del tramo
+    fila_inicio = idx_recarga + 1
+    fila_fin = idx_evento + 1
+
+    # Tipo de ganancia
+    if not jackpots.empty:
+        tipo_ganancia = f"obtuvo un jackpot de ${evento_principal['TotalJPWin']:,.2f} MXN en el juego {evento_principal['GameId']}"
+    else:
+        tipo_ganancia = (
+            f"su ganancia más alta fue de ${evento_principal['TotalWin']:,.2f} MXN "
+            f"con una apuesta de ${evento_principal['TotalBet']:,.2f} MXN "
+            f"(ratio x{round(evento_principal['ratio_ganancia'], 1)}) "
+            f"en el juego {evento_principal['GameId']}"
+        )
 
     reporte = (
-        f"El usuario {player_id} tenía un balance inicial de ${balance_inicial:,.2f} MXN, "
-        f"con apuestas de ${total_apostado:,.2f} MXN en el/los juego(s) {juegos_str}, "
-        f"modificando su balance a ${balance_final:,.2f} MXN. "
+        f"El usuario {player_id} tenía un balance inicial de ${balance_inicial:,.2f} MXN "
+        f"(fila {fila_inicio}), con apuestas de ${total_apostado:,.2f} MXN "
+        f"en los juegos principales: {juegos_str}, "
+        f"modificando su balance a ${balance_final:,.2f} MXN (fila {fila_fin}). "
         f"El cliente {tipo_ganancia}."
     )
 
