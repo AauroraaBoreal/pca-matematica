@@ -177,7 +177,7 @@ def pagina_validar():
                 import numpy as np
                 balance = df['Balance'].values
                 balance_change = df['BalanceChange'].values
-                diferencias = balance[:-1] - balance[1:] + balance_change[1:]
+                diferencias = -(balance[:-1] - balance[1:] + balance_change[1:])
 
                 # Encontrar retiros con diferencia menor a $100 del monto ingresado
                 tolerancia = 100
