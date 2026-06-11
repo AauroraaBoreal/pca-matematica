@@ -83,10 +83,10 @@ def guardar_jugador(df):
     engine = get_engine()
     player_id = str(df['PlayerId'].iloc[0])
     currency = str(df['Currency'].iloc[0]) if 'Currency' in df.columns else 'MXN'
-    apuesta_promedio = round(df['TotalBet'].mean(), 2)
-    apuesta_max = round(df['TotalBet'].max(), 2)
-    ganancia_max = round(df['TotalWin'].max(), 2)
-    ratio_promedio = round(df['ratio_ganancia'].mean(), 2)
+    apuesta_promedio = float(round(df['TotalBet'].mean(), 2))
+    apuesta_max = float(round(df['TotalBet'].max(), 2))
+    ganancia_max = float(round(df['TotalWin'].max(), 2))
+    ratio_promedio = float(round(df['ratio_ganancia'].mean(), 2))
     with engine.connect() as conn:
         conn.execute(text("""
             INSERT INTO jugadores (player_id, currency, apuesta_promedio, apuesta_max, ganancia_max, ratio_promedio, total_sesiones, ultima_actualizacion)
