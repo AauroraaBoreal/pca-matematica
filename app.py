@@ -369,7 +369,7 @@ def pagina_historial():
                 df_anom = pd.DataFrame(anom_response.data)
                 st.dataframe(df_anom[[
                     'event_time', 'game_id', 'total_bet',
-                    'total_win', 'tipo_anomalia', 'score_anomalia'
+                    'total_win', 'tipo_anomalia'
                 ]], use_container_width=True)
 
     except Exception as e:
