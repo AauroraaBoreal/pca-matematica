@@ -432,6 +432,7 @@ def main():
             label_visibility="collapsed"
         )
 
+
         st.divider()
         if st.button("Cerrar sesión", use_container_width=True):
             logout()
