@@ -181,8 +181,10 @@ def pagina_validar():
 
                 # Encontrar retiros con diferencia menor a $100 del monto ingresado
                 tolerancia = 100
+                mask_retiros = diferencias < 0
                 indices_cercanos = np.where(
-                    np.abs(diferencias - float(monto_validar)) <= tolerancia
+                    mask_retiros &
+                    (np.abs(diferencias + float(monto_validar)) <= tolerancia)
                 )[0]
 
                 if len(indices_cercanos) == 0:

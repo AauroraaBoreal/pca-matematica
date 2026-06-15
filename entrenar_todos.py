@@ -1,7 +1,7 @@
 from modules.modulo1_carga import cargar_csv
-from modules.modulo2_clasificacion import entrenar_modelo, clasificar_eventos
-from modules.modulo3_anomalias import actualizar_modelo_incremental, entrenar_detector
-from sklearn.metrics import classification_report, accuracy_score
+from modules.modulo3_anomalias import entrenar_detector
+from modules.modulo6_evaluacion_no_supervisada import evaluar_detector_no_supervisado
+
 import os
 import glob
 import pandas as pd
@@ -14,10 +14,7 @@ def validar_sistema():
     print("=" * 60)
     errores = []
 
-    if not os.path.exists('modelo_clasificador.pkl'):
-        errores.append("❌ modelo_clasificador.pkl no encontrado")
-    else:
-        print("✅ Modelo clasificador encontrado")
+    print("ℹ️ Modelo clasificador omitido: el enfoque principal es no supervisado")
 
     if not os.path.exists('modelo_anomalias.pkl'):
         errores.append("❌ modelo_anomalias.pkl no encontrado")
@@ -116,19 +113,21 @@ for archivo in archivos_entrenamiento:
         print(f"Error en {archivo}: {e}")
 
 print(f"\nTotal de registros para entrenamiento: {len(df_total)}")
-print("Entrenando modelo clasificador...")
-modelo_clf, df_total = entrenar_modelo(df_total)
 
-print("\nEntrenando detector de anomalías...")
-entrenar_detector(df_total)
+print("\nEntrenando detector de anomalías no supervisado...")
+modelo_anomalias = entrenar_detector(df_total)
 
-actualizar_modelo_incremental(df_total)
 print("\nEntrenamiento completo.")
 
-# --- EVALUACIÓN ---
+# --- EVALUACIÓN NO SUPERVISADA ---
 print("\nCargando CSV de evaluación independiente...")
 df_prueba = cargar_csv(CSV_EVALUACION)
-evaluar_modelo(modelo_clf, df_prueba)
+
+df_resultado = evaluar_detector_no_supervisado(
+    df_prueba,
+    modelo_anomalias,
+    salida_csv="resultados_evaluacion_no_supervisada.csv"
+)
 
 # --- VALIDACIÓN QA ---
 validar_sistema()

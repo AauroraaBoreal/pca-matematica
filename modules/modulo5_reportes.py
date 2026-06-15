@@ -13,10 +13,13 @@ def buscar_retiro(df, monto_retiro):
     balance_change = df['BalanceChange'].values
 
     # Calcular diferencias vectorialmente para todas las filas consecutivas
-    diferencias = -(balance[:-1] - balance[1:] + balance_change[1:])
+    diferencias = -(balance[:-1] - balance[1:] - balance_change[1:])
 
     # Buscar el índice con diferencia más cercana al monto ingresado
-    diff_abs = np.abs(diferencias - float(monto_retiro))
+    mask_retiros = diferencias < 0
+    diff_abs = np.full(len(diferencias), np.inf)
+    diff_abs[mask_retiros] = np.abs(diferencias[mask_retiros] + float(monto_retiro))
+
     idx_min = np.argmin(diff_abs)
 
     # idx_min corresponde a la fila i, el retiro ocurre en i+1
@@ -39,7 +42,7 @@ def generar_reporte_whatsapp(df, monto_validar=None, idx_forzado=None):
         balance = df['Balance'].values
         balance_change = df['BalanceChange'].values
         diferencias = -(balance[:-1] - balance[1:] + balance_change[1:])
-        idx_min = np.argmax(diferencias)
+        idx_min = np.argmin(diferencias)
         idx_evento = idx_min + 1
         monto_encontrado = diferencias[idx_min]
 
