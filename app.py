@@ -195,9 +195,10 @@ def pagina_validar():
                 retiros_encontrados = []
                 for idx in indices_cercanos:
                     idx_retiro = idx + 1
-                    monto_real = diferencias[idx]
+                    monto_real = abs(diferencias[idx])
                     fecha = df.loc[idx_retiro, 'EventTime']
-                    fila_csv = int(df.loc[idx_retiro, '_fila_csv']) if '_fila_csv' in df.columns else idx_retiro + 1
+                    # La fila del retiro es la última fila ANTES del salto de balance (idx, no idx_retiro)
+                    fila_csv = int(df.loc[idx, '_fila_csv']) if '_fila_csv' in df.columns else idx + 1
                     retiros_encontrados.append({
                         'idx': idx_retiro,
                         'monto': monto_real,

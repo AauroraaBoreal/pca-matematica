@@ -55,7 +55,7 @@ def generar_reporte_whatsapp(df, monto_validar=None, idx_forzado=None):
     tramo = df.loc[idx_recarga:idx_evento]
     balance_inicial = tramo['BalanceStart'].iloc[0]
     fila_inicio = int(df.loc[idx_recarga, '_fila_csv']) if '_fila_csv' in df.columns else idx_recarga + 1
-    fila_retiro = int(df.loc[idx_evento, '_fila_csv']) if '_fila_csv' in df.columns else idx_evento + 1
+    fila_retiro = int(df.loc[idx_evento - 1, '_fila_csv']) if '_fila_csv' in df.columns else idx_evento
 
     # Balance justo antes del retiro (fila anterior al retiro)
     idx_anterior = idx_evento - 1
