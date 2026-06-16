@@ -1,4 +1,5 @@
 import pandas as pd
+import csv
 import os
 
 COLUMNAS_REQUERIDAS = [
@@ -24,7 +25,11 @@ def cargar_csv(ruta_archivo):
     'BalanceStart', 'TotalWin', 'TotalJPWin', 'BalanceChange',
     'Balance', 'PointsEarned', 'Points'
     ]
-    df = pd.read_csv(ruta_archivo, usecols=range(17), header=0, engine='python')
+    with open(ruta_archivo, 'r', encoding='utf-8', errors='replace') as f:
+        reader = csv.reader(f)
+        header = next(reader)[:17]
+        filas = [row[:17] for row in reader if row]
+    df = pd.DataFrame(filas, columns=header)
     df.columns = COLUMNAS_USAR
     print(f"Archivo cargado: {len(df)} registros")
 
