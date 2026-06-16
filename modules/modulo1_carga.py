@@ -18,7 +18,14 @@ def cargar_csv(ruta_archivo):
     if not ruta_archivo.endswith('.csv'):
         raise ValueError("El archivo debe ser de formato CSV (.csv)")
 
-    df = pd.read_csv(ruta_archivo, on_bad_lines='skip', quotechar='"', engine='python')
+    COLUMNAS_USAR = [
+    '_id', 'PlayerId', 'Currency', 'SessionId', 'GameInstanceId',
+    'Completed', 'EventTime', 'GameId', 'EventId', 'TotalBet',
+    'BalanceStart', 'TotalWin', 'TotalJPWin', 'BalanceChange',
+    'Balance', 'PointsEarned', 'Points'
+    ]
+    df = pd.read_csv(ruta_archivo, usecols=range(17), header=0, engine='python')
+    df.columns = COLUMNAS_USAR
     print(f"Archivo cargado: {len(df)} registros")
 
     # Capturar fila original del CSV antes de cualquier filtrado
