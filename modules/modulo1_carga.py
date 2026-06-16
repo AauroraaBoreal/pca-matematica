@@ -32,6 +32,9 @@ def cargar_csv(ruta_archivo):
     if df['PlayerId'].isna().all():
         raise ValueError("El archivo no contiene registros válidos de jugador")
 
+    # Guardar número de fila original del CSV (header = fila 1, datos desde fila 2)
+    df['_fila_csv'] = df.index + 2
+
     # Convertir EventTime a datetime
     df['EventTime'] = pd.to_datetime(df['EventTime'], errors='coerce')
 
