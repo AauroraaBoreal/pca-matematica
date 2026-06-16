@@ -15,25 +15,22 @@ def cargar_csv(ruta_archivo):
     if not os.path.exists(ruta_archivo):
         raise FileNotFoundError(f"No se encontró el archivo: {ruta_archivo}")
 
-    # Validar que sea un archivo CSV
     if not ruta_archivo.endswith('.csv'):
         raise ValueError("El archivo debe ser de formato CSV (.csv)")
 
-    # Leer con quoting para manejar arrays en columnas como Jackpot y JackpotId
     df = pd.read_csv(ruta_archivo, on_bad_lines='skip', quotechar='"', engine='python')
     print(f"Archivo cargado: {len(df)} registros")
+
+    # AQUÍ, antes de todo — captura la fila original del CSV
+    df['_fila_csv'] = df.index + 2
 
     # Validar columnas requeridas
     faltantes = [col for col in COLUMNAS_REQUERIDAS if col not in df.columns]
     if faltantes:
         raise ValueError(f"El archivo no tiene el formato esperado. Columnas faltantes: {faltantes}")
 
-    # Validar que PlayerId tenga valores
     if df['PlayerId'].isna().all():
         raise ValueError("El archivo no contiene registros válidos de jugador")
-
-    # Guardar número de fila original del CSV (header = fila 1, datos desde fila 2)
-    df['_fila_csv'] = df.index + 2
 
     # Convertir EventTime a datetime
     df['EventTime'] = pd.to_datetime(df['EventTime'], errors='coerce')
