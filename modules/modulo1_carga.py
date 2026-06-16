@@ -45,9 +45,7 @@ def cargar_csv(ruta_archivo):
 
     for col in COLUMNAS_MONTO:
         if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors='coerce') / 100
-
-    df = df.dropna(subset=['TotalBet'])
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0) / 100
 
     df['ratio_ganancia'] = df.apply(
         lambda row: row['TotalWin'] / row['TotalBet'] if row['TotalBet'] > 0 else 0,
