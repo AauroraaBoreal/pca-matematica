@@ -178,7 +178,15 @@ def pagina_validar():
 
                 # Encontrar retiros con diferencia menor a $100 del monto ingresado
                 tolerancia = 100
-                mask_retiros = diferencias < 0
+
+                # Los retiros solo pueden ocurrir fuera de las jugadas internas de free games.
+                # Es decir, no pueden ocurrir entre spins del mismo GameInstanceId si el siguiente spin es un free game (EventId > 0).
+                event_ids = pd.to_numeric(df['EventId'], errors='coerce').fillna(0).values
+                mismo_game = (df['GameInstanceId'].values[:-1] == df['GameInstanceId'].values[1:])
+                siguiente_es_free = (event_ids[1:] > 0)
+                mask_dentro_free_games = mismo_game & siguiente_es_free
+
+                mask_retiros = (diferencias < 0) & (~mask_dentro_free_games)
 
                 # Para evitar considerar recargas (diferencias > 0) como retiros,
                 # calculamos la distancia absoluta de los retiros reales (diferencias < 0).

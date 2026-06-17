@@ -17,15 +17,24 @@ def buscar_retiro(df, monto_retiro):
     diferencias = -(balance[:-1] - balance[1:] + balance_change[1:])
 
     # Buscar el índice con diferencia más cercana al monto ingresado
-    mask_retiros = diferencias < 0
+    # Los retiros solo pueden ocurrir fuera de las jugadas internas de free games.
+    # Es decir, no pueden ocurrir entre spins del mismo GameInstanceId si el siguiente spin es un free game (EventId > 0).
+    event_ids = pd.to_numeric(df['EventId'], errors='coerce').fillna(0).values
+    mismo_game = (df['GameInstanceId'].values[:-1] == df['GameInstanceId'].values[1:])
+    siguiente_es_free = (event_ids[1:] > 0)
+    mask_dentro_free_games = mismo_game & siguiente_es_free
+
+    mask_retiros = (diferencias < 0) & (~mask_dentro_free_games)
+
     diff_abs = np.full(len(diferencias), np.inf)
-    diff_abs[mask_retiros] = np.abs(diferencias[mask_retiros] + float(monto_retiro))
+    if np.any(mask_retiros):
+        diff_abs[mask_retiros] = np.abs(diferencias[mask_retiros] + float(monto_retiro))
 
     idx_min = np.argmin(diff_abs)
 
     # idx_min corresponde a la fila i, el retiro ocurre en i+1
     idx_retiro = idx_min + 1
-    monto_encontrado = diferencias[idx_min]
+    monto_encontrado = diferencias[idx_min] if diff_abs[idx_min] != np.inf else 0.0
 
     return idx_retiro, monto_encontrado
 
