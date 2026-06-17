@@ -38,7 +38,6 @@ def validar_sistema():
 
     try:
         from modules.modulo1_carga import cargar_csv
-        from modules.modulo2_clasificacion import clasificar_eventos
         from modules.modulo3_anomalias import detectar_anomalias
         from modules.modulo5_reportes import mostrar_reportes
         print("✅ Todos los módulos importan correctamente")
@@ -55,43 +54,7 @@ def validar_sistema():
     print("=" * 60 + "\n")
     return len(errores) == 0
 
-def evaluar_modelo(modelo, df_prueba):
-    """Evalúa el modelo con un CSV que no participó en el entrenamiento."""
-    from modules.modulo2_clasificacion import preparar_features, etiquetar_evento
-    import pickle
 
-    print("\n" + "=" * 60)
-    print("EVALUACIÓN DEL MODELO — CSV INDEPENDIENTE")
-    print(f"Archivo de prueba: {CSV_EVALUACION}")
-    print(f"Total registros de prueba: {len(df_prueba)}")
-    print("=" * 60)
-
-    # Generar etiquetas reales
-    df_prueba['etiqueta_real'] = df_prueba.apply(etiquetar_evento, axis=1)
-
-    # Predecir con el modelo
-    X_prueba = preparar_features(df_prueba)
-    with open('modelo_clasificador.pkl', 'rb') as f:
-        modelo_clf = pickle.load(f)
-
-    df_prueba['etiqueta_predicha'] = modelo_clf.predict(X_prueba)
-
-    # Métricas
-    print("\nDistribución de etiquetas reales en CSV de prueba:")
-    print(df_prueba['etiqueta_real'].value_counts())
-
-    print("\nReporte de clasificación:")
-    print(classification_report(
-        df_prueba['etiqueta_real'],
-        df_prueba['etiqueta_predicha'],
-        zero_division=0
-    ))
-
-    acc = accuracy_score(df_prueba['etiqueta_real'], df_prueba['etiqueta_predicha'])
-    print(f"Accuracy general: {acc:.4f} ({acc*100:.2f}%)")
-    print("=" * 60)
-
-    return acc
 
 # --- ENTRENAMIENTO ---
 archivos = glob.glob('data/*.csv')

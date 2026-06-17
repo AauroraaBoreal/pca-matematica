@@ -1,5 +1,4 @@
 import pandas as pd
-import csv
 import os
 
 COLUMNAS_REQUERIDAS = [
@@ -19,18 +18,7 @@ def cargar_csv(ruta_archivo):
     if not ruta_archivo.endswith('.csv'):
         raise ValueError("El archivo debe ser de formato CSV (.csv)")
 
-    COLUMNAS_USAR = [
-    '_id', 'PlayerId', 'Currency', 'SessionId', 'GameInstanceId',
-    'Completed', 'EventTime', 'GameId', 'EventId', 'TotalBet',
-    'BalanceStart', 'TotalWin', 'TotalJPWin', 'BalanceChange',
-    'Balance', 'PointsEarned', 'Points'
-    ]
-    with open(ruta_archivo, 'r', encoding='utf-8', errors='replace') as f:
-        reader = csv.reader(f)
-        header = next(reader)[:17]
-        filas = [row[:17] for row in reader if row]
-    df = pd.DataFrame(filas, columns=header)
-    df.columns = COLUMNAS_USAR
+    df = pd.read_csv(ruta_archivo, quotechar='"', engine='python')
     print(f"Archivo cargado: {len(df)} registros")
 
     # Capturar fila original del CSV antes de cualquier filtrado

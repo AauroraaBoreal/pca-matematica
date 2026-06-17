@@ -227,13 +227,8 @@ def detectar_anomalias(df):
     print(f"Patrón ganancias altas — Juntas (<1h): {conteo_junto} | Chispeadas (>1h): {conteo_chispeado}")
     print(f"Patrón jackpots — Juntos (<1h): {jp_juntos} | Chispeados (>1h): {jp_chispeados}")
 
-    df['es_anomalia'] = df.apply(
-        lambda row: evaluar_anomalia(
-            row, umbral_ratio, umbral_bet,
-            conteo_junto, conteo_chispeado, patron_por_juego
-        ),
-        axis=1
-    )
+    # Detección de anomalías exclusivamente con Isolation Forest (predicción == -1 indica anomalía)
+    df['es_anomalia'] = modelo.predict(X) == -1
 
     df['es_free_game_inusual'] = df.apply(
         lambda row: row['TotalBet'] == 0 and row['TotalWin'] > 50000,
@@ -257,6 +252,9 @@ def detectar_anomalias(df):
     print(f"Anomalías detectadas: {total_anomalias} de {len(df)} registros ({total_anomalias/len(df)*100:.2f}%)")
     if total_free_games > 0:
         print(f"Observaciones free games inusuales: {total_free_games} (no marcados como anomalía)")
+
+    # Aprendizaje incremental: actualizamos el modelo con los nuevos datos
+    modelo = actualizar_modelo_incremental(df)
 
     return df, modelo
 

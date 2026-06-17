@@ -89,7 +89,6 @@ def logout():
 def procesar_archivo(uploaded_file, monto_validar=None):
     import tempfile
     from modules.modulo1_carga import cargar_csv
-    from modules.modulo2_clasificacion import clasificar_eventos
     from modules.modulo3_anomalias import detectar_anomalias
     from modules.modulo4_base_datos import crear_tablas, guardar_jugador, guardar_validacion, guardar_anomalias
     from modules.modulo5_reportes import generar_reporte_whatsapp, generar_reporte_qa
@@ -101,9 +100,6 @@ def procesar_archivo(uploaded_file, monto_validar=None):
     try:
         with st.spinner("Cargando y preprocesando datos..."):
             df = cargar_csv(tmp_path)
-
-        with st.spinner("Clasificando eventos..."):
-            df = clasificar_eventos(df)
 
         with st.spinner("Detectando anomalías..."):
             df, _ = detectar_anomalias(df)
@@ -152,7 +148,6 @@ def pagina_validar():
         if st.button("🔍 Buscar retiro", type="primary", use_container_width=True):
             import tempfile, os
             from modules.modulo1_carga import cargar_csv
-            from modules.modulo2_clasificacion import clasificar_eventos
             from modules.modulo3_anomalias import detectar_anomalias
             from modules.modulo5_reportes import buscar_retiro
 
@@ -162,8 +157,6 @@ def pagina_validar():
 
             with st.spinner("Cargando archivo..."):
                 df = cargar_csv(tmp_path)
-            with st.spinner("Clasificando eventos..."):
-                df = clasificar_eventos(df)
             with st.spinner("Detectando anomalías..."):
                 df, _ = detectar_anomalias(df)
 
@@ -177,7 +170,7 @@ def pagina_validar():
                 import numpy as np
                 balance = df['Balance'].values
                 balance_change = df['BalanceChange'].values
-                diferencias = -(balance[:-1] - balance[1:] + balance_change[1:])
+                diferencias = -(balance[:-1] - balance[1:] - balance_change[1:])
 
                 # Encontrar retiros con diferencia menor a $100 del monto ingresado
                 tolerancia = 100
@@ -197,8 +190,16 @@ def pagina_validar():
                     idx_retiro = idx + 1
                     monto_real = abs(diferencias[idx])
                     fecha = df.loc[idx_retiro, 'EventTime']
-                    # La fila del retiro es la última fila ANTES del salto de balance (idx, no idx_retiro)
-                    fila_csv = int(df.loc[idx, '_fila_csv']) if '_fila_csv' in df.columns else idx + 1
+                    # La fila del retiro: si hay una fila saltada en el CSV, es esa. Si no, es la fila donde se refleja el salto (idx_retiro)
+                    if '_fila_csv' in df.columns:
+                        fila_antes = int(df.loc[idx, '_fila_csv'])
+                        fila_despues = int(df.loc[idx_retiro, '_fila_csv'])
+                        if fila_despues - fila_antes > 1:
+                            fila_csv = fila_antes + 1 # Fila omitida en la lectura (ej. sin EventTime)
+                        else:
+                            fila_csv = fila_despues # Reflejado entre estas dos, apuntamos a la posterior
+                    else:
+                        fila_csv = idx_retiro + 1
                     retiros_encontrados.append({
                         'idx': idx_retiro,
                         'monto': monto_real,

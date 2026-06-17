@@ -3,7 +3,7 @@ import numpy as np
 
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, balanced_accuracy_score
 
-from modules.modulo2_clasificacion import etiquetar_evento
+
 from modules.modulo3_anomalias import preparar_features_anomalias
 
 
@@ -49,7 +49,7 @@ def evaluar_detector_no_supervisado(df, modelo, salida_csv="resultados_evaluacio
     df_eval["prediccion_modelo"] = modelo.predict(X)
     df_eval["es_anomalia_modelo"] = df_eval["prediccion_modelo"] == -1
 
-    df_eval["etiqueta_regla"] = df_eval.apply(etiquetar_evento, axis=1)
+
     df_eval["es_anomalia_regla"] = df_eval.apply(marcar_anomalia_por_reglas, axis=1)
 
     q10 = df_eval["anomalia_score"].quantile(0.10)
@@ -143,7 +143,7 @@ def evaluar_detector_no_supervisado(df, modelo, salida_csv="resultados_evaluacio
         "ratio_ganancia",
         "anomalia_score",
         "nivel_riesgo_modelo",
-        "etiqueta_regla",
+
         "es_anomalia_modelo",
         "es_anomalia_regla"
     ]

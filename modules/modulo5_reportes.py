@@ -13,6 +13,7 @@ def buscar_retiro(df, monto_retiro):
     balance_change = df['BalanceChange'].values
 
     # Calcular diferencias vectorialmente para todas las filas consecutivas
+    # Formula: -(Balance[i] - Balance[i+1] - BalanceChange[i+1])
     diferencias = -(balance[:-1] - balance[1:] - balance_change[1:])
 
     # Buscar el índice con diferencia más cercana al monto ingresado
@@ -35,27 +36,38 @@ def generar_reporte_whatsapp(df, monto_validar=None, idx_forzado=None):
         idx_evento = idx_forzado
         balance = df['Balance'].values
         balance_change = df['BalanceChange'].values
-        monto_encontrado = -(balance[idx_evento - 1] - balance[idx_evento] + balance_change[idx_evento])
+        monto_encontrado = -(balance[idx_evento - 1] - balance[idx_evento] - balance_change[idx_evento])
     elif monto_validar is not None and float(monto_validar) > 0:
         idx_evento, monto_encontrado = buscar_retiro(df, monto_validar)
     else:
         balance = df['Balance'].values
         balance_change = df['BalanceChange'].values
-        diferencias = -(balance[:-1] - balance[1:] + balance_change[1:])
+        diferencias = -(balance[:-1] - balance[1:] - balance_change[1:])
         idx_min = np.argmin(diferencias)
         idx_evento = idx_min + 1
         monto_encontrado = diferencias[idx_min]
 
     evento_principal = df.loc[idx_evento]
 
-    # Última recarga antes del retiro
-    recargas = df[(df['clasificacion'] == 'recarga') & (df.index < idx_evento)]
-    idx_recarga = recargas.index[-1] if not recargas.empty else 0
+    # Última recarga antes del retiro (recarga es cuando la diferencia > 0)
+    balance = df['Balance'].values
+    balance_change = df['BalanceChange'].values
+    diferencias_todas = -(balance[:-1] - balance[1:] - balance_change[1:])
+    indices_recargas = np.where(diferencias_todas[:idx_evento] > 0)[0]
+    idx_recarga = indices_recargas[-1] + 1 if len(indices_recargas) > 0 else 0
 
     tramo = df.loc[idx_recarga:idx_evento]
     balance_inicial = tramo['BalanceStart'].iloc[0]
     fila_inicio = int(df.loc[idx_recarga, '_fila_csv']) if '_fila_csv' in df.columns else idx_recarga + 1
-    fila_retiro = int(df.loc[idx_evento - 1, '_fila_csv']) if '_fila_csv' in df.columns else idx_evento
+    if '_fila_csv' in df.columns:
+        fila_antes = int(df.loc[idx_evento - 1, '_fila_csv']) if (idx_evento - 1) in df.index else int(df.loc[idx_evento, '_fila_csv']) - 1
+        fila_despues = int(df.loc[idx_evento, '_fila_csv'])
+        if fila_despues - fila_antes > 1:
+            fila_retiro = fila_antes + 1
+        else:
+            fila_retiro = fila_despues
+    else:
+        fila_retiro = idx_evento + 1
 
     # Balance justo antes del retiro (fila anterior al retiro)
     idx_anterior = idx_evento - 1
@@ -83,7 +95,7 @@ def generar_reporte_whatsapp(df, monto_validar=None, idx_forzado=None):
             f"${jp['TotalBet']:,.2f} MXN en el juego {jp['GameId']}."
         )
     else:
-        ganancias_altas = tramo[tramo['clasificacion'] == 'ganancia_alta']
+        ganancias_altas = tramo[tramo['ratio_ganancia'] >= 26]
         if not ganancias_altas.empty:
             ga = ganancias_altas.loc[ganancias_altas['TotalWin'].idxmax()]
             comentario_extra = (
