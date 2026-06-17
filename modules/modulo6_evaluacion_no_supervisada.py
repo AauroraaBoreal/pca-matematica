@@ -5,7 +5,13 @@ import numpy as np
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, balanced_accuracy_score
 
 
-from modules.modulo3_anomalias import preparar_features_anomalias
+from modules.modulo3_anomalias import (
+    preparar_features_anomalias,
+    marcar_free_games,
+    evaluar_anomalia,
+    analizar_patron_ganancias_altas,
+    analizar_patron_jackpots
+)
 
 
 def marcar_anomalia_por_reglas(row):
@@ -79,6 +85,24 @@ def evaluar_detector_no_supervisado(df, modelo, salida_csv="resultados_evaluacio
         df_eval["prediccion_modelo"] = modelo.predict(X)
         df_eval["es_anomalia_modelo"] = (df_eval["prediccion_modelo"] == -1) & (~df_eval["es_free_game"])
 
+    # Calcular umbrales y patrones para evaluar_anomalia
+    ratio_mean = df_eval['ratio_ganancia'].mean()
+    ratio_std = df_eval['ratio_ganancia'].std()
+    bet_mean = df_eval['TotalBet'].mean()
+    bet_std = df_eval['TotalBet'].std()
+    umbral_ratio = ratio_mean + (3 * ratio_std)
+    umbral_bet = bet_mean + (3 * bet_std)
+
+    conteo_junto, conteo_chispeado = analizar_patron_ganancias_altas(df_eval)
+    patron_por_juego, _, _ = analizar_patron_jackpots(df_eval)
+
+    # Filtrar anomalías detectadas por el modelo usando las reglas de negocio (evita falsos positivos en ratios bajos como x2, x3)
+    df_eval["es_anomalia_modelo"] = df_eval.apply(
+        lambda row: row["es_anomalia_modelo"] and evaluar_anomalia(
+            row, umbral_ratio, umbral_bet, conteo_junto, conteo_chispeado, patron_por_juego
+        ) if row["es_anomalia_modelo"] else False,
+        axis=1
+    )
 
     df_eval["es_anomalia_regla"] = df_eval.apply(marcar_anomalia_por_reglas, axis=1)
 
