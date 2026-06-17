@@ -13,8 +13,8 @@ def buscar_retiro(df, monto_retiro):
     balance_change = df['BalanceChange'].values
 
     # Calcular diferencias vectorialmente para todas las filas consecutivas
-    # Formula: -(Balance[i] - Balance[i+1] - BalanceChange[i+1])
-    diferencias = -(balance[:-1] - balance[1:] - balance_change[1:])
+    # Formula: -(Balance[i] - Balance[i+1] + BalanceChange[i+1])
+    diferencias = -(balance[:-1] - balance[1:] + balance_change[1:])
 
     # Buscar el índice con diferencia más cercana al monto ingresado
     mask_retiros = diferencias < 0
@@ -36,13 +36,13 @@ def generar_reporte_whatsapp(df, monto_validar=None, idx_forzado=None):
         idx_evento = idx_forzado
         balance = df['Balance'].values
         balance_change = df['BalanceChange'].values
-        monto_encontrado = -(balance[idx_evento - 1] - balance[idx_evento] - balance_change[idx_evento])
+        monto_encontrado = -(balance[idx_evento - 1] - balance[idx_evento] + balance_change[idx_evento])
     elif monto_validar is not None and float(monto_validar) > 0:
         idx_evento, monto_encontrado = buscar_retiro(df, monto_validar)
     else:
         balance = df['Balance'].values
         balance_change = df['BalanceChange'].values
-        diferencias = -(balance[:-1] - balance[1:] - balance_change[1:])
+        diferencias = -(balance[:-1] - balance[1:] + balance_change[1:])
         idx_min = np.argmin(diferencias)
         idx_evento = idx_min + 1
         monto_encontrado = diferencias[idx_min]
@@ -52,7 +52,7 @@ def generar_reporte_whatsapp(df, monto_validar=None, idx_forzado=None):
     # Última recarga antes del retiro (recarga es cuando la diferencia > 0)
     balance = df['Balance'].values
     balance_change = df['BalanceChange'].values
-    diferencias_todas = -(balance[:-1] - balance[1:] - balance_change[1:])
+    diferencias_todas = -(balance[:-1] - balance[1:] + balance_change[1:])
     indices_recargas = np.where(diferencias_todas[:idx_evento] > 0)[0]
     idx_recarga = indices_recargas[-1] + 1 if len(indices_recargas) > 0 else 0
 
