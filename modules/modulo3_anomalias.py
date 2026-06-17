@@ -17,6 +17,41 @@ def preparar_features_anomalias(df):
     X['TotalJPWin'] = X['TotalJPWin'].fillna(0)
     return X
 
+def marcar_free_games(df):
+    if 'EventId' not in df.columns or 'GameInstanceId' not in df.columns:
+        df['es_free_game'] = False
+        return df
+
+    df['EventId'] = df['EventId'].astype(str).str.strip()
+    df['GameInstanceId'] = df['GameInstanceId'].astype(str).str.strip()
+
+    # GameInstanceIds que tienen un evento base (EventId == '0') con apuesta real
+    base_mask = (df['EventId'] == '0') & (df['TotalBet'] > 0)
+    instancias_con_base = set(df.loc[base_mask, 'GameInstanceId'].unique())
+
+    # Son free games los que tienen EventId != '0' y pertenecen a esas instancias
+    df['es_free_game'] = (
+        (df['EventId'] != '0') &
+        (df['GameInstanceId'].isin(instancias_con_base))
+    )
+
+    # Sumar el TotalWin de todos los free games al evento base de su instancia
+    wins_por_instancia = (
+        df[df['es_free_game']]
+        .groupby('GameInstanceId')['TotalWin']
+        .sum()
+    )
+    for inst, win_total in wins_por_instancia.items():
+        idx_base = df[(df['GameInstanceId'] == inst) & (df['EventId'] == '0')].index
+        if len(idx_base) > 0:
+            df.loc[idx_base, 'TotalWin'] += win_total
+            base_bet = df.loc[idx_base[0], 'TotalBet']
+            df.loc[idx_base, 'ratio_ganancia'] = (
+                df.loc[idx_base, 'TotalWin'] / base_bet if base_bet > 0 else 0
+            )
+
+    return df
+
 def entrenar_detector(df):
     print("Entrenando Isolation Forest...")
     X = preparar_features_anomalias(df)
@@ -169,6 +204,9 @@ def generar_razon_anomalia(row, conteo_junto, conteo_chispeado, patron_por_juego
     return "Comportamiento transaccional que se desvía del patrón habitual del jugador según el modelo de detección."
 
 def evaluar_anomalia(row, umbral_ratio, umbral_bet, conteo_junto, conteo_chispeado, patron_por_juego):
+    if row.get('es_free_game', False):
+        return False
+    
     # Jackpot: evaluar con criterio contextual
     if pd.notna(row.get('TotalJPWin')) and row['TotalJPWin'] > 0:
         sospechoso, _ = es_jackpot_sospechoso(row, patron_por_juego)
@@ -204,6 +242,7 @@ def clasificar_tipo_anomalia(row):
     return 'comportamiento_atipico'
 
 def detectar_anomalias(df):
+    df = marcar_free_games(df)
     X = preparar_features_anomalias(df)
 
     if os.path.exists(MODELO_ANOMALIAS_PATH):
