@@ -265,7 +265,30 @@ def detectar_anomalias(df):
     else:
         modelo = entrenar_detector(df)
 
-    df['anomalia_score'] = modelo.decision_function(X)
+    # Asegurar compatibilidad de features con el modelo cargado
+    if hasattr(modelo, 'feature_names_in_'):
+        columnas_modelo = list(modelo.feature_names_in_)
+        for col in columnas_modelo:
+            if col not in X.columns:
+                if col == 'es_free_game':
+                    if 'es_free_game' not in df.columns:
+                        df = marcar_free_games(df)
+                    X['es_free_game'] = df['es_free_game'].astype(float)
+                else:
+                    X[col] = 0.0
+        X = X[columnas_modelo]
+
+    try:
+        df['anomalia_score'] = modelo.decision_function(X)
+        df['es_anomalia'] = (modelo.predict(X) == -1) & (~df['es_free_game'])
+    except Exception as e:
+        print(f"Advertencia: Error al usar el modelo guardado ({e}). Re-entrenando detector...")
+        modelo = entrenar_detector(df)
+        X = preparar_features_anomalias(df)
+        if hasattr(modelo, 'feature_names_in_'):
+            X = X[list(modelo.feature_names_in_)]
+        df['anomalia_score'] = modelo.decision_function(X)
+        df['es_anomalia'] = (modelo.predict(X) == -1) & (~df['es_free_game'])
 
     ratio_mean = df['ratio_ganancia'].mean()
     ratio_std = df['ratio_ganancia'].std()
@@ -279,10 +302,6 @@ def detectar_anomalias(df):
 
     print(f"Patrón ganancias altas — Juntas (<1h): {conteo_junto} | Chispeadas (>1h): {conteo_chispeado}")
     print(f"Patrón jackpots — Juntos (<1h): {jp_juntos} | Chispeados (>1h): {jp_chispeados}")
-
-    # Detección de anomalías exclusivamente con Isolation Forest (predicción == -1 indica anomalía)
-    # y aseguramos que no se consideren anomalías si pertenecen a free games normales
-    df['es_anomalia'] = (modelo.predict(X) == -1) & (~df['es_free_game'])
 
     df['es_free_game_inusual'] = df.apply(
         lambda row: row['TotalBet'] == 0 and row['TotalWin'] > 50000 and not row.get('es_free_game', False),

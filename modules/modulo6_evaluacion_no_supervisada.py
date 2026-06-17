@@ -51,9 +51,33 @@ def evaluar_detector_no_supervisado(df, modelo, salida_csv="resultados_evaluacio
 
     X = preparar_features_anomalias(df_eval)
 
-    df_eval["anomalia_score"] = modelo.decision_function(X)
-    df_eval["prediccion_modelo"] = modelo.predict(X)
-    df_eval["es_anomalia_modelo"] = (df_eval["prediccion_modelo"] == -1) & (~df_eval["es_free_game"])
+    # Asegurar compatibilidad de features con el modelo cargado
+    if hasattr(modelo, 'feature_names_in_'):
+        columnas_modelo = list(modelo.feature_names_in_)
+        for col in columnas_modelo:
+            if col not in X.columns:
+                if col == 'es_free_game':
+                    if 'es_free_game' not in df_eval.columns:
+                        df_eval = marcar_free_games(df_eval)
+                    X['es_free_game'] = df_eval['es_free_game'].astype(float)
+                else:
+                    X[col] = 0.0
+        X = X[columnas_modelo]
+
+    try:
+        df_eval["anomalia_score"] = modelo.decision_function(X)
+        df_eval["prediccion_modelo"] = modelo.predict(X)
+        df_eval["es_anomalia_modelo"] = (df_eval["prediccion_modelo"] == -1) & (~df_eval["es_free_game"])
+    except Exception as e:
+        print(f"Advertencia: Error al usar el modelo en evaluación ({e}). Re-entrenando detector...")
+        from modules.modulo3_anomalias import entrenar_detector
+        modelo = entrenar_detector(df_eval)
+        X = preparar_features_anomalias(df_eval)
+        if hasattr(modelo, 'feature_names_in_'):
+            X = X[list(modelo.feature_names_in_)]
+        df_eval["anomalia_score"] = modelo.decision_function(X)
+        df_eval["prediccion_modelo"] = modelo.predict(X)
+        df_eval["es_anomalia_modelo"] = (df_eval["prediccion_modelo"] == -1) & (~df_eval["es_free_game"])
 
 
     df_eval["es_anomalia_regla"] = df_eval.apply(marcar_anomalia_por_reglas, axis=1)
