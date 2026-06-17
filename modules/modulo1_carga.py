@@ -18,11 +18,27 @@ def cargar_csv(ruta_archivo):
     if not ruta_archivo.endswith('.csv'):
         raise ValueError("El archivo debe ser de formato CSV (.csv)")
 
-    df = pd.read_csv(ruta_archivo, on_bad_lines='skip', quotechar='"', engine='python')
-    print(f"Archivo cargado: {len(df)} registros")
+    import csv
+    data = []
+    with open(ruta_archivo, 'r', encoding='utf-8', errors='replace') as f:
+        reader = csv.reader(f)
+        try:
+            header = next(reader)
+        except StopIteration:
+            raise ValueError("El archivo CSV está vacío")
+        
+        for i, row in enumerate(reader):
+            if len(row) < len(header):
+                row.extend([''] * (len(header) - len(row)))
+            elif len(row) > len(header):
+                row = row[:len(header)]
+            row.append(i + 2)  # Excel line number (1-based index + header)
+            data.append(row)
 
-    # Capturar fila original del CSV antes de cualquier filtrado
-    df['_fila_csv'] = df.index + 2
+    header.append('_fila_csv')
+    df = pd.DataFrame(data, columns=header)
+    df = df.replace('', pd.NA)
+    print(f"Archivo cargado: {len(df)} registros")
 
     faltantes = [col for col in COLUMNAS_REQUERIDAS if col not in df.columns]
     if faltantes:
