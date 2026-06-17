@@ -17,14 +17,18 @@ def buscar_retiro(df, monto_retiro):
     diferencias = -(balance[:-1] - balance[1:] + balance_change[1:])
 
     # Buscar el índice con diferencia más cercana al monto ingresado
-    # Los retiros solo pueden ocurrir fuera de las jugadas internas de free games.
-    # Es decir, no pueden ocurrir entre spins del mismo GameInstanceId si el siguiente spin es un free game (EventId > 0).
-    event_ids = pd.to_numeric(df['EventId'], errors='coerce').fillna(0).values
+    # Solo cuenta retiros de evento 0 o del último evento de free games (EventId != '0' pero el siguiente es '0' o cambia de juego)
+    event_ids = df['EventId'].astype(str).str.strip().values
     mismo_game = (df['GameInstanceId'].values[:-1] == df['GameInstanceId'].values[1:])
-    siguiente_es_free = (event_ids[1:] > 0)
-    mask_dentro_free_games = mismo_game & siguiente_es_free
 
-    mask_retiros = (diferencias < 0) & (~mask_dentro_free_games)
+    cond_inicio_cero = (event_ids[:-1] == '0')
+    es_free_game_inicio = (event_ids[:-1] != '0')
+    siguiente_diferente = ~mismo_game
+    siguiente_cero = (event_ids[1:] == '0')
+    cond_ultimo_free = es_free_game_inicio & (siguiente_diferente | siguiente_cero)
+
+    mask_permitido = cond_inicio_cero | cond_ultimo_free
+    mask_retiros = (diferencias < -0.01) & mask_permitido
 
     diff_abs = np.full(len(diferencias), np.inf)
     if np.any(mask_retiros):
@@ -52,9 +56,29 @@ def generar_reporte_whatsapp(df, monto_validar=None, idx_forzado=None):
         balance = df['Balance'].values
         balance_change = df['BalanceChange'].values
         diferencias = -(balance[:-1] - balance[1:] + balance_change[1:])
-        idx_min = np.argmin(diferencias)
-        idx_evento = idx_min + 1
-        monto_encontrado = diferencias[idx_min]
+
+        # Solo cuenta retiros de evento 0 o del último evento de free games
+        event_ids = df['EventId'].astype(str).str.strip().values
+        mismo_game = (df['GameInstanceId'].values[:-1] == df['GameInstanceId'].values[1:])
+
+        cond_inicio_cero = (event_ids[:-1] == '0')
+        es_free_game_inicio = (event_ids[:-1] != '0')
+        siguiente_diferente = ~mismo_game
+        siguiente_cero = (event_ids[1:] == '0')
+        cond_ultimo_free = es_free_game_inicio & (siguiente_diferente | siguiente_cero)
+
+        mask_permitido = cond_inicio_cero | cond_ultimo_free
+        mask_retiros = (diferencias < -0.01) & mask_permitido
+
+        if np.any(mask_retiros):
+            diferencias_filtradas = np.full(len(diferencias), np.inf)
+            diferencias_filtradas[mask_retiros] = diferencias[mask_retiros]
+            idx_min = np.argmin(diferencias_filtradas)
+            idx_evento = idx_min + 1
+            monto_encontrado = diferencias[idx_min]
+        else:
+            idx_evento = 1
+            monto_encontrado = 0.0
 
     evento_principal = df.loc[idx_evento]
 

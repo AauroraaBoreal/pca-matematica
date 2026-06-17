@@ -179,17 +179,21 @@ def pagina_validar():
                 # Encontrar retiros con diferencia menor a $100 del monto ingresado
                 tolerancia = 100
 
-                # Los retiros solo pueden ocurrir fuera de las jugadas internas de free games.
-                # Es decir, no pueden ocurrir entre spins del mismo GameInstanceId si el siguiente spin es un free game (EventId > 0).
-                event_ids = pd.to_numeric(df['EventId'], errors='coerce').fillna(0).values
+                # Solo cuenta retiros de evento 0 o del último evento de free games (EventId != '0' pero el siguiente es '0' o cambia de juego)
+                event_ids = df['EventId'].astype(str).str.strip().values
                 mismo_game = (df['GameInstanceId'].values[:-1] == df['GameInstanceId'].values[1:])
-                siguiente_es_free = (event_ids[1:] > 0)
-                mask_dentro_free_games = mismo_game & siguiente_es_free
 
-                mask_retiros = (diferencias < 0) & (~mask_dentro_free_games)
+                cond_inicio_cero = (event_ids[:-1] == '0')
+                es_free_game_inicio = (event_ids[:-1] != '0')
+                siguiente_diferente = ~mismo_game
+                siguiente_cero = (event_ids[1:] == '0')
+                cond_ultimo_free = es_free_game_inicio & (siguiente_diferente | siguiente_cero)
+
+                mask_permitido = cond_inicio_cero | cond_ultimo_free
+                mask_retiros = (diferencias < -0.01) & mask_permitido
 
                 # Para evitar considerar recargas (diferencias > 0) como retiros,
-                # calculamos la distancia absoluta de los retiros reales (diferencias < 0).
+                # calculamos la distancia absoluta de los retiros reales (diferencias < -0.01).
                 diff_abs = np.full(len(diferencias), np.inf)
                 if np.any(mask_retiros):
                     diff_abs[mask_retiros] = np.abs(diferencias[mask_retiros] + float(monto_validar))
