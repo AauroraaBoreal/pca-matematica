@@ -179,15 +179,21 @@ def pagina_validar():
                 # Encontrar retiros con diferencia menor a $100 del monto ingresado
                 tolerancia = 100
                 mask_retiros = diferencias < 0
-                indices_cercanos = np.where(
-                    mask_retiros &
-                    (np.abs(diferencias + float(monto_validar)) <= tolerancia)
-                )[0]
+
+                # Para evitar considerar recargas (diferencias > 0) como retiros,
+                # calculamos la distancia absoluta de los retiros reales (diferencias < 0).
+                diff_abs = np.full(len(diferencias), np.inf)
+                if np.any(mask_retiros):
+                    diff_abs[mask_retiros] = np.abs(diferencias[mask_retiros] + float(monto_validar))
+
+                indices_cercanos = np.where(diff_abs <= tolerancia)[0]
 
                 if len(indices_cercanos) == 0:
-                    # Ampliar tolerancia si no hay resultados
-                    idx_min = np.argmin(np.abs(diferencias - float(monto_validar)))
-                    indices_cercanos = [idx_min]
+                    # Ampliar tolerancia si no hay resultados, pero solo entre retiros reales
+                    if np.any(mask_retiros):
+                        idx_min = np.argmin(diff_abs)
+                        if diff_abs[idx_min] != np.inf:
+                            indices_cercanos = [idx_min]
 
                 retiros_encontrados = []
                 for idx in indices_cercanos:
@@ -246,6 +252,8 @@ def pagina_validar():
 
             if st.button("✅ Validar retiro seleccionado", type="primary", use_container_width=True):
                 st.session_state['retiro_confirmado'] = retiro_seleccionado
+        elif 'df_procesado' in st.session_state and st.session_state.get('monto_validar', 0) > 0:
+            st.error(f"❌ No se encontró ningún retiro cercano a **${st.session_state['monto_validar']:,.2f} MXN** en el archivo cargado.")
 
         # Procesar una vez confirmado el retiro
         if 'retiro_confirmado' in st.session_state and 'df_procesado' in st.session_state:
