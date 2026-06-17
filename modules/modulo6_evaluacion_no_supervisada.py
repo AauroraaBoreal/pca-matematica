@@ -1,4 +1,5 @@
 import pandas as pd
+# pyrefly: ignore [missing-import]
 import numpy as np
 
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, balanced_accuracy_score

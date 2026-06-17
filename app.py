@@ -1,7 +1,10 @@
+# pyrefly: ignore [missing-import]
 import streamlit as st
 import pandas as pd
 import os
+# pyrefly: ignore [missing-import]
 from supabase import create_client
+# pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -167,6 +170,7 @@ def pagina_validar():
 
             if float(monto_validar) > 0:
                 # Buscar todos los retiros cercanos al monto
+                # pyrefly: ignore [missing-import]
                 import numpy as np
                 balance = df['Balance'].values
                 balance_change = df['BalanceChange'].values
