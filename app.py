@@ -349,7 +349,10 @@ def pagina_historial():
             return
 
         df_hist = pd.DataFrame(response.data)
-        df_hist['fecha_procesamiento'] = pd.to_datetime(df_hist['fecha_procesamiento']).dt.strftime('%d/%m/%Y %H:%M')
+        df_hist['fecha_procesamiento'] = pd.to_datetime(df_hist['fecha_procesamiento'])
+        if df_hist['fecha_procesamiento'].dt.tz is None:
+            df_hist['fecha_procesamiento'] = df_hist['fecha_procesamiento'].dt.tz_localize('UTC')
+        df_hist['fecha_procesamiento'] = df_hist['fecha_procesamiento'].dt.tz_convert('America/Lima').dt.strftime('%d/%m/%Y %H:%M')
         df_hist['fecha_inicio'] = pd.to_datetime(df_hist['fecha_inicio']).dt.strftime('%d/%m/%Y')
         df_hist['fecha_fin'] = pd.to_datetime(df_hist['fecha_fin']).dt.strftime('%d/%m/%Y')
         df_hist['resultado'] = df_hist['resultado'].apply(
@@ -398,9 +401,10 @@ def pagina_jugadores():
             return
 
         df_jug = pd.DataFrame(response.data)
-        df_jug['ultima_actualizacion'] = pd.to_datetime(
-            df_jug['ultima_actualizacion']
-        ).dt.strftime('%d/%m/%Y %H:%M')
+        df_jug['ultima_actualizacion'] = pd.to_datetime(df_jug['ultima_actualizacion'])
+        if df_jug['ultima_actualizacion'].dt.tz is None:
+            df_jug['ultima_actualizacion'] = df_jug['ultima_actualizacion'].dt.tz_localize('UTC')
+        df_jug['ultima_actualizacion'] = df_jug['ultima_actualizacion'].dt.tz_convert('America/Lima').dt.strftime('%d/%m/%Y %H:%M')
         df_jug['apuesta_promedio'] = df_jug['apuesta_promedio'].apply(lambda x: f"${x:,.2f}")
         df_jug['apuesta_max'] = df_jug['apuesta_max'].apply(lambda x: f"${x:,.2f}")
         df_jug['ganancia_max'] = df_jug['ganancia_max'].apply(lambda x: f"${x:,.2f}")

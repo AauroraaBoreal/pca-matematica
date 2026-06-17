@@ -129,7 +129,9 @@ def generar_reporte_qa(df_anomalias):
 
     lineas = []
     lineas.append("⚠️ REPORTE DE ALERTA - ÁREA DE QA")
-    lineas.append(f"Fecha de generación: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    from datetime import timezone, timedelta
+    tz_peru = timezone(timedelta(hours=-5))
+    lineas.append(f"Fecha de generación: {datetime.now(tz_peru).strftime('%d/%m/%Y %H:%M')}")
     lineas.append(f"Total de registros sospechosos: {len(df_anomalias)}")
     lineas.append("-" * 50)
 

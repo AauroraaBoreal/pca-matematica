@@ -48,6 +48,10 @@ def cargar_csv(ruta_archivo):
         raise ValueError("El archivo no contiene registros válidos de jugador")
 
     df['EventTime'] = pd.to_datetime(df['EventTime'], errors='coerce')
+    # Convertir de UTC a horario de Perú (UTC-5)
+    if df['EventTime'].dt.tz is None:
+        df['EventTime'] = df['EventTime'].dt.tz_localize('UTC')
+    df['EventTime'] = df['EventTime'].dt.tz_convert('America/Lima').dt.tz_localize(None)
 
     filas_sin_fecha = df['EventTime'].isna().sum()
     if filas_sin_fecha > 0:
