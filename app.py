@@ -176,8 +176,8 @@ def pagina_validar():
                 balance_change = df['BalanceChange'].values
                 diferencias = -(balance[:-1] - balance[1:] + balance_change[1:])
 
-                # Encontrar retiros con diferencia menor a $100 del monto ingresado
-                tolerancia = 100
+                # Encontrar retiros con diferencia menor a $1000 del monto ingresado
+                tolerancia = 1000
 
                 # Solo cuenta retiros de evento 0 o del último evento de free games (EventId != '0' pero el siguiente es '0' o cambia de juego)
                 event_ids = df['EventId'].astype(str).str.strip().values
@@ -199,13 +199,6 @@ def pagina_validar():
                     diff_abs[mask_retiros] = np.abs(diferencias[mask_retiros] + float(monto_validar))
 
                 indices_cercanos = np.where(diff_abs <= tolerancia)[0]
-
-                if len(indices_cercanos) == 0:
-                    # Ampliar tolerancia si no hay resultados, pero solo entre retiros reales
-                    if np.any(mask_retiros):
-                        idx_min = np.argmin(diff_abs)
-                        if diff_abs[idx_min] != np.inf:
-                            indices_cercanos = [idx_min]
 
                 retiros_encontrados = []
                 for idx in indices_cercanos:

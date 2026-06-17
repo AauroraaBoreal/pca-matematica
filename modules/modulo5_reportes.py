@@ -36,9 +36,13 @@ def buscar_retiro(df, monto_retiro):
 
     idx_min = np.argmin(diff_abs)
 
+    # Si la diferencia más cercana supera la tolerancia de 1000 pesos, consideramos que no se encontró
+    if diff_abs[idx_min] > 1000.0:
+        return None, None
+
     # idx_min corresponde a la fila i, el retiro ocurre en i+1
     idx_retiro = idx_min + 1
-    monto_encontrado = diferencias[idx_min] if diff_abs[idx_min] != np.inf else 0.0
+    monto_encontrado = diferencias[idx_min]
 
     return idx_retiro, monto_encontrado
 
@@ -52,6 +56,8 @@ def generar_reporte_whatsapp(df, monto_validar=None, idx_forzado=None):
         monto_encontrado = -(balance[idx_evento - 1] - balance[idx_evento] + balance_change[idx_evento])
     elif monto_validar is not None and float(monto_validar) > 0:
         idx_evento, monto_encontrado = buscar_retiro(df, monto_validar)
+        if idx_evento is None:
+            raise ValueError(f"No se encontró ningún retiro cercano a ${float(monto_validar):,.2f} MXN en el archivo.")
     else:
         balance = df['Balance'].values
         balance_change = df['BalanceChange'].values
