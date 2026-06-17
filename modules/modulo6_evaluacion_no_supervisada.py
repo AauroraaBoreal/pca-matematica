@@ -13,6 +13,9 @@ def marcar_anomalia_por_reglas(row):
     Esta función NO representa una etiqueta real.
     Solo representa una regla de negocio para comparar contra el modelo.
     """
+    if row.get('es_free_game', False):
+        return False
+
     if pd.notna(row.get("TotalJPWin")) and row["TotalJPWin"] > 0:
         return True
 
@@ -42,13 +45,15 @@ def evaluar_detector_no_supervisado(df, modelo, salida_csv="resultados_evaluacio
     print("EVALUACIÓN NO SUPERVISADA - ISOLATION FOREST")
     print("=" * 70)
 
+    from modules.modulo3_anomalias import marcar_free_games
     df_eval = df.copy()
+    df_eval = marcar_free_games(df_eval)
 
     X = preparar_features_anomalias(df_eval)
 
     df_eval["anomalia_score"] = modelo.decision_function(X)
     df_eval["prediccion_modelo"] = modelo.predict(X)
-    df_eval["es_anomalia_modelo"] = df_eval["prediccion_modelo"] == -1
+    df_eval["es_anomalia_modelo"] = (df_eval["prediccion_modelo"] == -1) & (~df_eval["es_free_game"])
 
 
     df_eval["es_anomalia_regla"] = df_eval.apply(marcar_anomalia_por_reglas, axis=1)

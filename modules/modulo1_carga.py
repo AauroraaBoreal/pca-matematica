@@ -3,7 +3,7 @@ import os
 
 COLUMNAS_REQUERIDAS = [
     'PlayerId', 'BalanceStart', 'BalanceChange', 'TotalBet',
-    'TotalWin', 'TotalJPWin', 'EventTime', 'GameInstanceId'
+    'TotalWin', 'TotalJPWin', 'EventTime', 'GameInstanceId', 'EventId'
 ]
 
 COLUMNAS_MONTO = [
