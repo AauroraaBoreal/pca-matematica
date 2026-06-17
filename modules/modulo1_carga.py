@@ -18,7 +18,7 @@ def cargar_csv(ruta_archivo):
     if not ruta_archivo.endswith('.csv'):
         raise ValueError("El archivo debe ser de formato CSV (.csv)")
 
-    df = pd.read_csv(ruta_archivo, quotechar='"', engine='python')
+    df = pd.read_csv(ruta_archivo, on_bad_lines='skip', quotechar='"', engine='python')
     print(f"Archivo cargado: {len(df)} registros")
 
     # Capturar fila original del CSV antes de cualquier filtrado
