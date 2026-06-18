@@ -34,6 +34,7 @@ def obtener_formato_moneda(df_or_row):
         else:
             curr = 'MXN'
 
+
         if curr == 'PEN':
             return 'S/', 'PEN'
         else:
