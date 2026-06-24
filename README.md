@@ -75,3 +75,24 @@ Si prefieres procesar un archivo directamente por consola de manera rápida, pue
 ```bash
 python3 main.py data/10069.csv
 ```
+
+---
+
+## Plan de Implementación del Sistema en GDP Studios
+
+A continuación se presenta la planificación estructurada para el despliegue e integración de la solución en GDP Studios, ajustado para el uso exclusivo del modelo de clasificación **Random Forest**:
+
+### Cuadro 18: Plan de implementación del sistema en GDP Studios
+
+| Fase | Actividad | Responsable | Duración estimada |
+| :--- | :--- | :--- | :--- |
+| **Fase 1 - Preparación** | Configurar el acceso de los analistas en Supabase Auth con sus correos institucionales. | Área de TI de GDP Studios | 1 semana |
+| **Fase 1 - Preparación** | Verificar que los archivos CSV exportados desde el sistema interno cumplen el formato requerido. | Analista responsable | 1 semana |
+| **Fase 1 - Preparación** | Recolectar archivos CSV históricos de al menos 15 jugadores adicionales para ampliar el dataset de entrenamiento. | Área de validación | 2 semanas |
+| **Fase 2 - Entrenamiento inicial** | Ejecutar `entrenar_todos.py` con el dataset ampliado para entrenar y ajustar el modelo **Random Forest** (configurando estimadores y profundidad óptimos). | Analista responsable | 1 semana |
+| **Fase 2 - Entrenamiento inicial** | Verificar que las métricas (Accuracy, Balanced Accuracy, Precision, Recall y F1-Score) del modelo **Random Forest** entrenado mantienen los umbrales de negocio definidos. | Analista responsable | 1 semana |
+| **Fase 3 - Piloto** | Operar el sistema en paralelo con el proceso manual durante 4 semanas comparando resultados y alertas del modelo **Random Forest**. | Todos los analistas | 4 semanas |
+| **Fase 3 - Piloto** | Registrar casos donde el sistema (vía **Random Forest**) y el proceso manual difieran para ajustar hiperparámetros o refinar las reglas de negocio asociadas. | Analista responsable | 4 semanas |
+| **Fase 4 - Adopción** | Reemplazar el proceso manual por el sistema respaldado por **Random Forest** como método principal de validación de jugadas. | Área de validación | Permanente |
+| **Fase 4 - Adopción** | Reentrenar el modelo **Random Forest** mensualmente con los nuevos CSV procesados para evitar la degradación del rendimiento por cambios de comportamiento (*concept drift*). | Analista responsable | Mensual |
+

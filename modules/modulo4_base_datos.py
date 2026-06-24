@@ -67,15 +67,7 @@ def crear_tablas():
                 score_anomalia DECIMAL
             );
         """))
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS modelo_versiones (
-                version_id SERIAL PRIMARY KEY,
-                fecha_actualizacion TIMESTAMP DEFAULT NOW(),
-                player_id VARCHAR,
-                registros_nuevos INTEGER,
-                accuracy_post DECIMAL
-            );
-        """))
+
         # Migración: asegurar que la columna top_juegos_json exista si la tabla ya fue creada anteriormente
         try:
             conn.execute(text("ALTER TABLE validaciones ADD COLUMN IF NOT EXISTS top_juegos_json TEXT;"))
