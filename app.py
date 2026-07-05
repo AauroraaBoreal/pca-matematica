@@ -252,6 +252,7 @@ def pagina_validar():
                         
                         try:
                             df_part = cargar_csv(tmp_path)
+                            df_part['_source_file'] = uf.name
                             df_list.append(df_part)
                         except Exception as e:
                             st.warning(f"⚠️ El archivo {uf.name} se ignoró (sin información válida o error): {e}")
@@ -320,12 +321,14 @@ def pagina_validar():
                         else:
                             fila_csv = idx_retiro + 1
                         player_id_val = df.loc[idx_retiro, 'PlayerId'] if 'PlayerId' in df.columns else 'Desconocido'
+                        source_file_val = df.loc[idx_retiro, '_source_file'] if '_source_file' in df.columns else 'Archivo desconocido'
                         retiros_encontrados.append({
                             'idx': idx_retiro,
                             'monto': monto_real,
                             'fecha': fecha,
                             'fila': fila_csv,
-                            'player_id': player_id_val
+                            'player_id': player_id_val,
+                            'source_file': source_file_val
                         })
 
                     st.session_state['retiros_encontrados'] = retiros_encontrados
@@ -353,16 +356,16 @@ def pagina_validar():
             if len(retiros) > 1:
                 st.warning(f"⚠️ Se encontraron **{len(retiros)} retiros** con montos similares. Selecciona el que deseas validar:")
                 
-                jugadores_unicos = sorted(list(set([str(r.get('player_id', 'Desconocido')) for r in retiros])))
+                archivos_unicos = sorted(list(set([str(r.get('source_file', 'Archivo desconocido')) for r in retiros])))
                 
-                if len(jugadores_unicos) > 1:
-                    filtro_jugador = st.selectbox("👤 Filtrar por cliente:", ["Todos"] + jugadores_unicos)
-                    retiros_a_mostrar = [r for r in retiros if str(r.get('player_id', 'Desconocido')) == filtro_jugador] if filtro_jugador != "Todos" else retiros
+                if len(archivos_unicos) > 1:
+                    filtro_archivo = st.selectbox("📁 Filtrar por archivo:", ["Todos"] + archivos_unicos)
+                    retiros_a_mostrar = [r for r in retiros if str(r.get('source_file', 'Archivo desconocido')) == filtro_archivo] if filtro_archivo != "Todos" else retiros
                 else:
                     retiros_a_mostrar = retiros
 
                 opciones = {
-                    f"👤 Cliente: {r.get('player_id', 'Desconocido')} — Fila {r['fila']} — {simbolo}{r['monto']:,.2f} {moneda} — {pd.to_datetime(r['fecha']).strftime('%d/%m/%Y %H:%M')}": r
+                    f"📁 {r.get('source_file', 'Archivo desconocido')} — Fila {r['fila']} — {simbolo}{r['monto']:,.2f} {moneda} — {pd.to_datetime(r['fecha']).strftime('%d/%m/%Y %H:%M')}": r
                     for r in retiros_a_mostrar
                 }
 
@@ -378,7 +381,7 @@ def pagina_validar():
 
             else:
                 r = retiros[0]
-                st.info(f"✅ Se encontró **1 retiro**: 👤 Cliente: {r.get('player_id', 'Desconocido')} — Fila {r['fila']} — {simbolo}{r['monto']:,.2f} {moneda} — {pd.to_datetime(r['fecha']).strftime('%d/%m/%Y %H:%M')}")
+                st.info(f"✅ Se encontró **1 retiro**: 📁 {r.get('source_file', 'Archivo desconocido')} — Fila {r['fila']} — {simbolo}{r['monto']:,.2f} {moneda} — {pd.to_datetime(r['fecha']).strftime('%d/%m/%Y %H:%M')}")
                 retiro_seleccionado = r
 
             if retiro_seleccionado and st.button("✅ Validar retiro seleccionado", type="primary", use_container_width=True):
