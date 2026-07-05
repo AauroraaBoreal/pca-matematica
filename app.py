@@ -237,7 +237,6 @@ def pagina_validar():
         if st.button("🔍 Buscar retiro", type="primary", use_container_width=True):
             import tempfile, os
             import traceback
-            import pandas as pd
             from modules.modulo1_carga import cargar_csv
             from modules.modulo3_random_forest import detectar_anomalias_random_forest
             from modules.modulo5_reportes import buscar_retiro
