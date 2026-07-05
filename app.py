@@ -319,11 +319,13 @@ def pagina_validar():
                                 fila_csv = fila_despues # Reflejado entre estas dos, apuntamos a la posterior
                         else:
                             fila_csv = idx_retiro + 1
+                        player_id_val = df.loc[idx_retiro, 'PlayerId'] if 'PlayerId' in df.columns else 'Desconocido'
                         retiros_encontrados.append({
                             'idx': idx_retiro,
                             'monto': monto_real,
                             'fecha': fecha,
-                            'fila': fila_csv
+                            'fila': fila_csv,
+                            'player_id': player_id_val
                         })
 
                     st.session_state['retiros_encontrados'] = retiros_encontrados
@@ -350,26 +352,36 @@ def pagina_validar():
 
             if len(retiros) > 1:
                 st.warning(f"⚠️ Se encontraron **{len(retiros)} retiros** con montos similares. Selecciona el que deseas validar:")
+                
+                jugadores_unicos = sorted(list(set([str(r.get('player_id', 'Desconocido')) for r in retiros])))
+                
+                if len(jugadores_unicos) > 1:
+                    filtro_jugador = st.selectbox("👤 Filtrar por cliente:", ["Todos"] + jugadores_unicos)
+                    retiros_a_mostrar = [r for r in retiros if str(r.get('player_id', 'Desconocido')) == filtro_jugador] if filtro_jugador != "Todos" else retiros
+                else:
+                    retiros_a_mostrar = retiros
 
                 opciones = {
-                    f"Fila {r['fila']} — {simbolo}{r['monto']:,.2f} {moneda} — {pd.to_datetime(r['fecha']).strftime('%d/%m/%Y %H:%M')}": r
-                    for r in retiros
+                    f"👤 Cliente: {r.get('player_id', 'Desconocido')} — Fila {r['fila']} — {simbolo}{r['monto']:,.2f} {moneda} — {pd.to_datetime(r['fecha']).strftime('%d/%m/%Y %H:%M')}": r
+                    for r in retiros_a_mostrar
                 }
 
-                seleccion = st.radio(
-                    "Retiros encontrados:",
-                    list(opciones.keys()),
-                    key="seleccion_retiro"
-                )
-
-                retiro_seleccionado = opciones[seleccion]
+                if opciones:
+                    seleccion = st.radio(
+                        "Retiros encontrados:",
+                        list(opciones.keys()),
+                        key="seleccion_retiro"
+                    )
+                    retiro_seleccionado = opciones[seleccion]
+                else:
+                    retiro_seleccionado = None
 
             else:
                 r = retiros[0]
-                st.info(f"✅ Se encontró **1 retiro**: Fila {r['fila']} — {simbolo}{r['monto']:,.2f} {moneda} — {pd.to_datetime(r['fecha']).strftime('%d/%m/%Y %H:%M')}")
+                st.info(f"✅ Se encontró **1 retiro**: 👤 Cliente: {r.get('player_id', 'Desconocido')} — Fila {r['fila']} — {simbolo}{r['monto']:,.2f} {moneda} — {pd.to_datetime(r['fecha']).strftime('%d/%m/%Y %H:%M')}")
                 retiro_seleccionado = r
 
-            if st.button("✅ Validar retiro seleccionado", type="primary", use_container_width=True):
+            if retiro_seleccionado and st.button("✅ Validar retiro seleccionado", type="primary", use_container_width=True):
                 st.session_state['retiro_confirmado'] = retiro_seleccionado
         elif 'df_procesado' in st.session_state and st.session_state.get('monto_validar', 0) > 0:
             df = st.session_state['df_procesado']
