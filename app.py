@@ -165,33 +165,66 @@ def pagina_validar():
     st.markdown("## 📂 Nueva validación")
     st.markdown("Sube el archivo CSV del jugador para procesarlo.")
 
-    uploaded_file = st.file_uploader(
-        "Selecciona el archivo CSV",
+    uploaded_files = st.file_uploader(
+        "Selecciona los archivos CSV (Puedes subir varios a la vez)",
         type=['csv'],
-        help="Archivo de jugadas exportado del sistema de GDP Studios"
+        accept_multiple_files=True,
+        help="Archivos de jugadas exportados del sistema de GDP Studios"
     )
 
-    if uploaded_file:
-        st.info(f"Archivo cargado: **{uploaded_file.name}** ({uploaded_file.size / 1024:.1f} KB)")
+    # Limpiar estado si se cambian los archivos subidos para evitar guardar validaciones erróneas
+    current_files = [f.name for f in uploaded_files] if uploaded_files else []
+    if st.session_state.get('last_uploaded_files') != current_files:
+        for key in ['df_procesado', 'retiros_encontrados', 'retiro_confirmado', 'monto_validar', 'seleccion_retiro']:
+            if key in st.session_state:
+                del st.session_state[key]
+        st.session_state['last_uploaded_files'] = current_files
 
-        # Intentar detectar la moneda del archivo cargado para mostrarla en el input
+    if uploaded_files:
+        if len(uploaded_files) > 1:
+            st.info(f"**{len(uploaded_files)}** archivos cargados.")
+        else:
+            st.info(f"Archivo cargado: **{uploaded_files[0].name}** ({uploaded_files[0].size / 1024:.1f} KB)")
+
+        from modules.modulo1_carga import COLUMNAS_REQUERIDAS
+        import io, csv
+        
+        archivos_validos = True
         moneda_detectada = "MXN"
-        try:
-            import io, csv
-            content = uploaded_file.getvalue()
-            # Leer el header y la primera fila del CSV
+        
+        for i, uf in enumerate(uploaded_files):
+            content = uf.getvalue()
             f_in = io.StringIO(content.decode('utf-8', errors='replace'))
-            reader = csv.reader(f_in)
-            header = next(reader)
-            if 'Currency' in header:
-                idx_curr = header.index('Currency')
-                first_row = next(reader)
-                if len(first_row) > idx_curr:
-                    val = str(first_row[idx_curr]).strip().upper()
-                    if val in ['PEN', 'MXN']:
-                        moneda_detectada = val
-        except Exception:
-            pass
+            first_line = f_in.readline()
+            f_in.seek(0)
+            delimitador = ';' if ';' in first_line and first_line.count(';') > first_line.count(',') else ','
+            reader = csv.reader(f_in, delimiter=delimitador)
+            
+            try:
+                header = next(reader)
+                faltantes = [col for col in COLUMNAS_REQUERIDAS if col not in header]
+                if faltantes:
+                    st.error(f"❌ El archivo **{uf.name}** no tiene el formato correcto. Faltan las columnas: {', '.join(faltantes)}")
+                    archivos_validos = False
+                    continue
+                
+                # Intentar detectar la moneda del primer archivo cargado
+                if i == 0 and 'Currency' in header:
+                    idx_curr = header.index('Currency')
+                    try:
+                        first_row = next(reader)
+                        if len(first_row) > idx_curr:
+                            val = str(first_row[idx_curr]).strip().upper()
+                            if val in ['PEN', 'MXN']:
+                                moneda_detectada = val
+                    except StopIteration:
+                        pass
+            except StopIteration:
+                st.error(f"❌ El archivo **{uf.name}** está completamente vacío.")
+                archivos_validos = False
+                
+        if not archivos_validos:
+            st.stop()
 
         monto_validar = st.number_input(
             f"Monto del retiro a validar ({moneda_detectada})",
@@ -204,24 +237,38 @@ def pagina_validar():
         if st.button("🔍 Buscar retiro", type="primary", use_container_width=True):
             import tempfile, os
             import traceback
+            import pandas as pd
             from modules.modulo1_carga import cargar_csv
             from modules.modulo3_random_forest import detectar_anomalias_random_forest
             from modules.modulo5_reportes import buscar_retiro
 
-            tmp_path = None
             try:
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as tmp:
-                    tmp.write(uploaded_file.getvalue())
-                    tmp_path = tmp.name
+                df_list = []
+                with st.spinner("Cargando y uniendo archivos..."):
+                    for uf in uploaded_files:
+                        tmp_path = None
+                        with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as tmp:
+                            tmp.write(uf.getvalue())
+                            tmp_path = tmp.name
+                        
+                        try:
+                            df_part = cargar_csv(tmp_path)
+                            df_list.append(df_part)
+                        except Exception as e:
+                            st.warning(f"⚠️ El archivo {uf.name} se ignoró (sin información válida o error): {e}")
+                        finally:
+                            if tmp_path and os.path.exists(tmp_path):
+                                os.unlink(tmp_path)
 
-                with st.spinner("Cargando archivo..."):
-                    df = cargar_csv(tmp_path)
+                if not df_list:
+                    st.error("❌ Ninguno de los archivos subidos contiene datos válidos.")
+                    st.stop()
+
+                df = pd.concat(df_list, ignore_index=True)
+                df = df.sort_values('EventTime').reset_index(drop=True)
+
                 with st.spinner("Detectando anomalías..."):
                     df, _ = detectar_anomalias_random_forest(df)
-
-                if tmp_path and os.path.exists(tmp_path):
-                    os.unlink(tmp_path)
-                    tmp_path = None
 
                 # Guardar df en session state
                 st.session_state['df_procesado'] = df
@@ -288,18 +335,13 @@ def pagina_validar():
                     st.session_state['monto_validar'] = 0
 
             except Exception as e:
-                if tmp_path and os.path.exists(tmp_path):
-                    try:
-                        os.unlink(tmp_path)
-                    except Exception:
-                        pass
                 for key in ['df_procesado', 'retiros_encontrados', 'retiro_confirmado',
                             'monto_validar', 'seleccion_retiro']:
                     if key in st.session_state:
                         del st.session_state[key]
                 print("--- ERROR LOGS ---")
                 traceback.print_exc()
-                st.warning(f"⚠️ Error al procesar el archivo: {str(e)}")
+                st.warning(f"⚠️ Error al procesar: {str(e)}")
 
         # Mostrar opciones de retiro si hay múltiples
         if 'retiros_encontrados' in st.session_state and st.session_state['retiros_encontrados']:
